@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>OSRS Bingo Board</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --panel: #111827;
+      --panel2: #0f172a;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --border: #243244;
+      --accent: #22c55e;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --tile: #0b1220;
+      --tile-hover: #0d172b;
+      --shadow: rgba(0,0,0,.35);
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(1200px 600px at 20% 0%, #0d1b2a, var(--bg));
+      color: var(--text);
+    }
+
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px 16px 48px;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 18px;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: 20px;
+      margin: 0;
+      letter-spacing: .2px;
+    }
+
+    .sub {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 6px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    button, input[type="text"] {
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, var(--panel), var(--panel2));
+      color: var(--text);
+      padding: 9px 10px;
+      border-radius: 10px;
+      font-size: 13px;
+      box-shadow: 0 8px 18px var(--shadow);
+    }
+
+    button {
+      cursor: pointer;
+      transition: transform .05s ease, border-color .15s ease, opacity .15s ease;
+      user-select: none;
+    }
+
+    button:hover { border-color: #35507a; }
+    button:active { transform: translateY(1px); }
+    button.secondary { opacity: .92; }
+    button.danger { border-color: #4b1b1b; }
+    button.danger:hover { border-color: #7a2a2a; }
+
+    input[type="text"] {
+      width: 220px;
+      outline: none;
+      box-shadow: 0 8px 18px var(--shadow);
+    }
+
+    .boardShell {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(17,24,39,.9), rgba(15,23,42,.75));
+      box-shadow: 0 12px 24px var(--shadow);
+    }
+
+    .metaLeft {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      font-size: 12px;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: rgba(2,6,23,.35);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(17,24,39,.75), rgba(2,6,23,.35));
+      box-shadow: 0 16px 32px var(--shadow);
+    }
+
+    .tile {
+      position: relative;
+      min-height: 110px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(11,18,32,.9), rgba(2,6,23,.45));
+      padding: 10px 10px 34px;
+      cursor: pointer;
+      transition: transform .07s ease, border-color .15s ease, background .15s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .tile:hover {
+      border-color: #35507a;
+      background: linear-gradient(180deg, rgba(13,23,43,.92), rgba(2,6,23,.5));
+      transform: translateY(-1px);
+    }
+
+    .tile.completed {
+      border-color: rgba(34,197,94,.55);
+      box-shadow: 0 0 0 2px rgba(34,197,94,.12) inset;
+    }
+
+    .tile.completed::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(600px 240px at 50% 0%, rgba(34,197,94,.18), transparent 55%);
+      pointer-events: none;
+    }
+
+    .labelRow {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: .2px;
+    }
+
+    .coords {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: rgba(2,6,23,.35);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(148,163,184,.55);
+      box-shadow: 0 0 0 2px rgba(148,163,184,.12);
+    }
+
+    .tile.completed .dot {
+      background: rgba(34,197,94,.9);
+      box-shadow: 0 0 0 2px rgba(34,197,94,.18);
+    }
+
+    .text {
+      font-size: 14px;
+      line-height: 1.25;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    .hint {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 11px;
+      color: rgba(148,163,184,.85);
+      opacity: .85;
+    }
+
+    .modalBackdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 50;
+    }
+    .modalBackdrop.open { display: flex; }
+
+    .modal {
+      width: min(720px, 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(17,24,39,.95), rgba(2,6,23,.7));
+      box-shadow: 0 24px 60px rgba(0,0,0,.55);
+      overflow: hidden;
+    }
+    .modal header {
+      padding: 14px 14px 0;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .modal h2 {
+      font-size: 14px;
+      margin: 0;
+      color: var(--text);
+    }
+    .modalBody {
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 160px;
+      resize: vertical;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      background: rgba(2,6,23,.35);
+      color: var(--text);
+      outline: none;
+      font-size: 13px;
+      line-height: 1.35;
+      box-shadow: 0 10px 22px var(--shadow);
+    }
+    .modalActions {
+      padding: 0 14px 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+    .small {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    @media (max-width: 780px) {
+      .grid { gap: 8px; padding: 10px; }
+      .tile { min-height: 92px; }
+      input[type="text"] { width: 100%; }
+      .toolbar { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>OSRS Bingo Board</h1>
+        <div class="sub">Click a tile to edit. Shift+click toggles completed. Export/Import for events.</div>
+      </div>
+      <div class="toolbar">
+        <input id="boardTitle" type="text" placeholder="Board title (optional)" />
+        <button class="secondary" id="saveBtn">Save</button>
+        <button class="secondary" id="shareBtn">Share Link</button>
+        <button class="secondary" id="exportBtn">Export JSON</button>
+        <button class="secondary" id="importBtn">Import JSON</button>
+        <button class="danger" id="clearBtn">Clear</button>
+      </div>
+    </header>
+
+    <div class="boardShell">
+      <div class="meta">
+        <div class="metaLeft">
+          <div class="pill" id="progressPill">0 / 25 completed</div>
+          <div class="pill">Tip: Use short task names; add details in parentheses</div>
+        </div>
+        <div class="pill" id="lastSaved">Not saved yet</div>
+      </div>
+
+      <div class="grid" id="grid"></div>
+    </div>
+  </div>
+
+  <!-- Edit Tile Modal -->
+  <div class="modalBackdrop" id="editBackdrop" role="dialog" aria-modal="true">
+    <div class="modal">
+      <header>
+        <h2 id="editTitle">Edit Tile</h2>
+        <button id="closeEdit">Close</button>
+      </header>
+      <div class="modalBody">
+        <div class="small" id="editHelp"></div>
+        <textarea id="editText" placeholder="Enter task text for this tile..."></textarea>
+        <div class="small">
+          Shortcut: Shift+click a tile toggles completion without opening this editor.
+        </div>
+      </div>
+      <div class="modalActions">
+        <button class="secondary" id="toggleCompleteBtn">Toggle Completed</button>
+        <button id="saveTileBtn">Save Tile</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import/Export Modal -->
+  <div class="modalBackdrop" id="jsonBackdrop" role="dialog" aria-modal="true">
+    <div class="modal">
+      <header>
+        <h2 id="jsonTitle">JSON</h2>
+        <button id="closeJson">Close</button>
+      </header>
+      <div class="modalBody">
+        <div class="small" id="jsonHelp"></div>
+        <textarea id="jsonText" spellcheck="false"></textarea>
+      </div>
+      <div class="modalActions">
+        <button class="secondary" id="copyJsonBtn">Copy</button>
+        <button id="applyJsonBtn">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- Data Model ----------
+    const STORAGE_KEY = "osrs_bingo_board_v1";
+
+    function defaultBoard() {
+      const tiles = [];
+      for (let i = 0; i < 25; i++) {
+        tiles.push({ text: "", completed: false });
+      }
+      return {
+        version: 1,
+        title: "",
+        tiles
+      };
+    }
+
+    function coordsForIndex(i) {
+      // A1..E5
+      const col = i % 5;           // 0-4
+      const row = Math.floor(i/5); // 0-4
+      const letters = ["A","B","C","D","E"];
+      return `${letters[col]}${row+1}`;
+    }
+
+    let board = defaultBoard();
+    let editingIndex = null;
+
+    // ---------- DOM ----------
+    const gridEl = document.getElementById("grid");
+    const progressPill = document.getElementById("progressPill");
+    const lastSaved = document.getElementById("lastSaved");
+    const boardTitle = document.getElementById("boardTitle");
+
+    const editBackdrop = document.getElementById("editBackdrop");
+    const editTitle = document.getElementById("editTitle");
+    const editHelp = document.getElementById("editHelp");
+    const editText = document.getElementById("editText");
+
+    const jsonBackdrop = document.getElementById("jsonBackdrop");
+    const jsonTitle = document.getElementById("jsonTitle");
+    const jsonHelp = document.getElementById("jsonHelp");
+    const jsonText = document.getElementById("jsonText");
+
+    // ---------- Render ----------
+    function render() {
+      gridEl.innerHTML = "";
+      boardTitle.value = board.title || "";
+
+      board.tiles.forEach((tile, i) => {
+        const tileEl = document.createElement("div");
+        tileEl.className = "tile" + (tile.completed ? " completed" : "");
+        tileEl.setAttribute("data-index", String(i));
+
+        const labelRow = document.createElement("div");
+        labelRow.className = "labelRow";
+
+        const coords = document.createElement("span");
+        coords.className = "coords";
+        coords.textContent = coordsForIndex(i);
+
+        const status = document.createElement("span");
+        status.className = "status";
+        status.innerHTML = `<span class="dot"></span>${tile.completed ? "Completed" : "Open"}`;
+
+        labelRow.appendChild(coords);
+        labelRow.appendChild(status);
+
+        const textEl = document.createElement("div");
+        textEl.className = "text";
+        textEl.textContent = tile.text || "(click to edit)";
+
+        const hint = document.createElement("div");
+        hint.className = "hint";
+        hint.innerHTML = `<span>Click: edit</span><span>Shift+click: mark</span>`;
+
+        tileEl.appendChild(labelRow);
+        tileEl.appendChild(textEl);
+        tileEl.appendChild(hint);
+
+        tileEl.addEventListener("click", (e) => {
+          const idx = Number(tileEl.getAttribute("data-index"));
+          if (e.shiftKey) {
+            toggleCompleted(idx);
+            return;
+          }
+          openEdit(idx);
+        });
+
+        gridEl.appendChild(tileEl);
+      });
+
+      updateProgress();
+    }
+
+    function updateProgress() {
+      const completed = board.tiles.filter(t => t.completed).length;
+      progressPill.textContent = `${completed} / 25 completed`;
+    }
+
+    // ---------- Edit Modal ----------
+    function openEdit(index) {
+      editingIndex = index;
+      const tile = board.tiles[index];
+      const c = coordsForIndex(index);
+
+      editTitle.textContent = `Edit Tile ${c}`;
+      editHelp.textContent = `Tile ID: ${c}. Use this ID for rules/scoring references.`;
+      editText.value = tile.text || "";
+
+      editBackdrop.classList.add("open");
+      editText.focus();
+      editText.select();
+    }
+
+    function closeEdit() {
+      editingIndex = null;
+      editBackdrop.classList.remove("open");
+    }
+
+    function saveEditingTile() {
+      if (editingIndex === null) return;
+      board.tiles[editingIndex].text = (editText.value || "").trim();
+      render();
+      closeEdit();
+    }
+
+    function toggleCompleted(index) {
+      board.tiles[index].completed = !board.tiles[index].completed;
+      render();
+    }
+
+    document.getElementById("closeEdit").addEventListener("click", closeEdit);
+    document.getElementById("saveTileBtn").addEventListener("click", saveEditingTile);
+    document.getElementById("toggleCompleteBtn").addEventListener("click", () => {
+      if (editingIndex === null) return;
+      toggleCompleted(editingIndex);
+      // Keep modal open while toggling
+      openEdit(editingIndex);
+    });
+
+    editBackdrop.addEventListener("click", (e) => {
+      if (e.target === editBackdrop) closeEdit();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        if (editBackdrop.classList.contains("open")) closeEdit();
+        if (jsonBackdrop.classList.contains("open")) closeJson();
+      }
+      // Ctrl/Cmd+S saves
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        saveBoard();
+      }
+    });
+
+    // ---------- JSON Modal ----------
+    function openJson(mode) {
+      jsonBackdrop.classList.add("open");
+      if (mode === "export") {
+        jsonTitle.textContent = "Export JSON";
+        jsonHelp.textContent = "Copy this JSON to share or archive. You can re-import it later.";
+        jsonText.value = JSON.stringify(board, null, 2);
+        jsonText.focus();
+        jsonText.select();
+        document.getElementById("applyJsonBtn").style.display = "none";
+      } else {
+        jsonTitle.textContent = "Import JSON";
+        jsonHelp.textContent = "Paste JSON here and click Apply. This will overwrite the current board.";
+        jsonText.value = "";
+        jsonText.focus();
+        document.getElementById("applyJsonBtn").style.display = "inline-block";
+      }
+    }
+
+    function closeJson() {
+      jsonBackdrop.classList.remove("open");
+    }
+
+    document.getElementById("closeJson").addEventListener("click", closeJson);
+    jsonBackdrop.addEventListener("click", (e) => {
+      if (e.target === jsonBackdrop) closeJson();
+    });
+
+    document.getElementById("copyJsonBtn").addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(jsonText.value);
+        alert("Copied to clipboard.");
+      } catch {
+        alert("Copy failed. Select the text and copy manually.");
+      }
+    });
+
+    document.getElementById("applyJsonBtn").addEventListener("click", () => {
+      try {
+        const parsed = JSON.parse(jsonText.value);
+        validateAndLoadBoard(parsed);
+        render();
+        closeJson();
+      } catch (err) {
+        alert("Invalid JSON. Please check formatting and try again.");
+      }
+    });
+
+    // ---------- Validation / Load ----------
+    function validateAndLoadBoard(parsed) {
+      // Minimal validation; keeps it simple for events
+      if (!parsed || typeof parsed !== "object") throw new Error("Not an object");
+      if (!Array.isArray(parsed.tiles) || parsed.tiles.length !== 25) throw new Error("tiles must be length 25");
+
+      const clean = defaultBoard();
+      clean.title = typeof parsed.title === "string" ? parsed.title : "";
+      clean.tiles = parsed.tiles.map(t => ({
+        text: typeof t.text === "string" ? t.text : "",
+        completed: !!t.completed
+      }));
+
+      board = clean;
+      setUrlFromBoard(board);
+    }
+
+    // ---------- Save / Load ----------
+    function saveBoard() {
+      board.title = (boardTitle.value || "").trim();
+      const payload = JSON.stringify(board);
+      localStorage.setItem(STORAGE_KEY, payload);
+      lastSaved.textContent = "Saved: " + new Date().toLocaleString();
+      setUrlFromBoard(board);
+    }
+
+    function loadBoardFromStorage() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      try {
+        const parsed = JSON.parse(raw);
+        validateAndLoadBoard(parsed);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    // ---------- Share Link (URL hash) ----------
+    function compressToHash(obj) {
+      // Simple base64 of UTF-8 JSON (not cryptographic; just shareable)
+      const json = JSON.stringify(obj);
+      const bytes = new TextEncoder().encode(json);
+      let binary = "";
+      bytes.forEach(b => binary += String.fromCharCode(b));
+      return btoa(binary).replaceAll("=", "").replaceAll("+", "-").replaceAll("/", "_");
+    }
+
+    function decompressFromHash(hash) {
+      const safe = hash.replaceAll("-", "+").replaceAll("_", "/");
+      // restore padding
+      const padLen = (4 - (safe.length % 4)) % 4;
+      const padded = safe + "=".repeat(padLen);
+
+      const binary = atob(padded);
+      const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+      const json = new TextDecoder().decode(bytes);
+      return JSON.parse(json);
+    }
+
+    function setUrlFromBoard(obj) {
+      try {
+        const h = compressToHash(obj);
+        history.replaceState(null, "", "#" + h);
+      } catch {
+        // If URL gets too long or encoding fails, silently ignore
+      }
+    }
+
+    function loadBoardFromUrl() {
+      const hash = (location.hash || "").replace(/^#/, "").trim();
+      if (!hash) return false;
+      try {
+        const parsed = decompressFromHash(hash);
+        validateAndLoadBoard(parsed);
+        lastSaved.textContent = "Loaded from share link";
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    // ---------- Buttons ----------
+    document.getElementById("saveBtn").addEventListener("click", saveBoard);
+
+    document.getElementById("shareBtn").addEventListener("click", async () => {
+      board.title = (boardTitle.value || "").trim();
+      setUrlFromBoard(board);
+      const url = location.href;
+
+      try {
+        await navigator.clipboard.writeText(url);
+        alert("Share link copied to clipboard.");
+      } catch {
+        alert("Could not copy automatically. Copy this URL from your address bar:\n\n" + url);
+      }
+    });
+
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      board.title = (boardTitle.value || "").trim();
+      openJson("export");
+    });
+
+    document.getElementById("importBtn").addEventListener("click", () => openJson("import"));
+
+    document.getElementById("clearBtn").addEventListener("click", () => {
+      if (!confirm("Clear all tiles and completion marks?")) return;
+      board = defaultBoard();
+      board.title = (boardTitle.value || "").trim();
+      render();
+      saveBoard();
+    });
+
+    boardTitle.addEventListener("change", () => {
+      board.title = (boardTitle.value || "").trim();
+      setUrlFromBoard(board);
+    });
+
+    // ---------- Init ----------
+    (function init() {
+      // Priority: URL hash > localStorage > empty
+      const loadedFromUrl = loadBoardFromUrl();
+      if (!loadedFromUrl) {
+        const loadedFromStorage = loadBoardFromStorage();
+        if (loadedFromStorage) {
+          lastSaved.textContent = "Loaded from browser save";
+        }
+      }
+      render();
+    })();
+  </script>
+</body>
+</html>
